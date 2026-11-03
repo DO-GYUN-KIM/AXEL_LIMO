@@ -1,0 +1,124 @@
+# 미션 순서와 미션별 파라미터입니다 (mission_manager 노드).
+# - mission_order: 트랙 진행 순서(시계방향) = 상태 머신 순서입니다. 연습할 때 줄을 빼거나 순서를 바꿔도 됩니다.
+# - start_mission은 여기가 아니라 launch 인자로 줍니다:
+#     ros2 launch autorace_bringup robot.launch.py start_mission:=m7_obstacles
+# - approach_timeout_s: 미션 시작 신호를 못 찾을 때 포기하는 시간
+# - active_timeout_s : 미션 동작을 포기하고 다음으로 넘어가는 시간 (규정: 15 s 안에 진입/재출발 못 하면 0점)
+# - 실수 값에는 소수점을 꼭 붙이십시오.
+
+mission_manager:
+  ros__parameters:
+    mission_order:
+      - start
+      - m5_slow_zone       # 방지턱 서행 10점
+      - m6_zigzag          # 지그재그 서행 유도선 15점
+      - m3_crosswalk       # 보행자 표지판 정지 10점
+      - m7_obstacles       # 3차선 정적 장애물 10점
+      - m2_fork            # 갈림길 A/B 10점
+      - m8_cones           # 라바콘 15점
+      - m1_traffic_light   # 신호등 15점
+      - m4_parking         # T자 주차 15점
+      - finish
+
+    start:
+      start_delay_s: 1.0
+
+    m5_slow_zone:
+      trigger_classes: "slow"
+      min_conf: 0.5
+      min_area: 1500.0               # TODO(확인)
+      section_length_m: 1.5          # TODO(확인)
+      speed: 0.15
+      approach_timeout_s: 40.0
+      active_timeout_s: 30.0
+
+    m6_zigzag:
+      trigger_classes: ""            # 비우면 start_after_m 거리로 시작
+      start_after_m: 0.3             # TODO(확인)
+      section_length_m: 1.7          # 규정집 1677 mm
+      speed: 0.15
+      k_yaw: 1.5
+      lane_blend: 0.0
+      approach_timeout_s: 20.0
+      active_timeout_s: 20.0
+
+    m3_crosswalk:
+      trigger_classes: "pedestrian"
+      min_conf: 0.5
+      min_area: 1500.0               # TODO(확인)
+      hold_s: 3.5                    # 규정 3 s 이상
+      approach_speed: 0.15
+      creep_speed: 0.05
+      stop_margin_m: 0.02            # TODO(확인): 정지 오차 측정 후 보정 (±5 cm)
+      leave_distance_m: 0.4
+      approach_timeout_s: 40.0
+      active_timeout_s: 14.0
+
+    m7_obstacles:
+      trigger_distance_m: 0.8
+      start_lane_index: 0            # TODO(확인): 진입 차로 (-1 왼쪽, 0 가운데, 1 오른쪽)
+      prefer_side: "left"
+      speed: 0.2
+      turn_angular: 1.0              # TODO(확인)
+      turn_time_s: 0.8               # TODO(확인)
+      straight_time_s: 0.6
+      emergency_stop_m: 0.20
+      section_length_m: 4.0          # TODO(확인)
+      clear_time_s: 2.0
+      approach_timeout_s: 40.0
+      active_timeout_s: 45.0
+
+    m2_fork:
+      left_class: "left_A"
+      right_class: "right_B"
+      min_conf: 0.5
+      min_area: 1000.0
+      vote_threshold: 2.0
+      decide_timeout_s: 20.0
+      default_branch: "A"            # 표지판을 못 보면 이쪽으로
+      bias_start_m: 0.3              # TODO(확인)
+      bias_length_m: 0.8             # TODO(확인)
+      bias_angular: 0.6              # TODO(확인)
+      speed: 0.25
+      approach_timeout_s: 40.0
+      active_timeout_s: 15.0
+
+    m8_cones:
+      min_cones: 2
+      trigger_distance_m: 0.8
+      speed: 0.18
+      k_gap: 1.5
+      max_angular: 1.2
+      clear_time_s: 1.5
+      min_section_m: 1.0             # TODO(확인)
+      approach_timeout_s: 40.0
+      active_timeout_s: 40.0
+
+    m1_traffic_light:
+      stop_classes: "red,yellow"
+      go_classes: "green"
+      min_conf: 0.5
+      min_area: 1500.0               # TODO(확인): 광고 모니터 속 신호등보다 큰 값
+      x_min_ratio: 0.0               # TODO(확인): 광고 모니터 위치를 보고 좁힘
+      x_max_ratio: 1.0
+      green_confirm_s: 0.3
+      stop_even_if_green: false      # TODO(확인): 규정 해석
+      max_wait_s: 60.0
+      approach_speed: 0.15
+      creep_speed: 0.05
+      stop_margin_m: 0.02            # TODO(확인)
+      leave_distance_m: 0.4
+      approach_timeout_s: 60.0
+      active_timeout_s: 90.0
+
+    m4_parking:
+      trigger_classes: "parking"     # TODO(확인): 주차 표지판 유무
+      trigger_distance_m: -1.0       # 0 이상이면 거리로 시작
+      side_trigger_m: -1.0
+      # TODO(확인): 자리표시용 동작입니다. 실제 주차 구역에 맞게 다시 정하십시오.
+      steps_linear: [0.15, 0.0, -0.12, -0.10, 0.0]
+      steps_angular: [0.0, 0.0, 1.2, 0.0, 0.0]
+      steps_duration: [1.0, 0.5, 1.6, 1.5, 0.5]
+      final_hold_s: 3.0
+      approach_timeout_s: 60.0
+      active_timeout_s: 40.0

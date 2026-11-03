@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>autorace_bringup</name>
+  <version>0.1.0</version>
+  <description>실차/오프라인 launch 파일, 파라미터 YAML, rosbag 녹화 스크립트입니다.</description>
+  <maintainer email="team@example.com">autorace team</maintainer>
+  <license>MIT</license>
+
+  <exec_depend>launch</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
+  <exec_depend>autorace_perception</exec_depend>
+  <exec_depend>autorace_control</exec_depend>
+  <!-- orbbec_camera, ydlidar_ros2_driver는 로봇의 ~/wego_ws에만 있으므로 의존성에 넣지 않았습니다.
+       robot.launch.py가 실행할 때 찾고, 없으면 경고만 남깁니다. -->
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>

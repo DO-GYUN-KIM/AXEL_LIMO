@@ -1,0 +1,85 @@
+# 인식/제어 노드 파라미터입니다.
+# 주의: ROS2 Humble은 파라미터 타입을 엄격하게 검사합니다.
+#       실수(float) 값은 반드시 소수점을 붙이십시오 (예: 1 이 아니라 1.0). 정수 배열은 정수로 씁니다.
+# "TODO(확인)" 표시는 실차/rosbag으로 확인하기 전의 임시값입니다.
+
+lane_detector:
+  ros__parameters:
+    image_topic: /camera/color/image_raw/compressed
+    lane_info_topic: /autorace/lane_info
+    publish_debug: false
+    # 버드아이 변환 점 (원본 이미지 크기 대비 비율) x,y 순서: 좌상, 우상, 우하, 좌하
+    warp_src: [0.30, 0.60, 0.70, 0.60, 0.98, 0.95, 0.02, 0.95]   # TODO(확인)
+    warp_dst: [0.25, 0.00, 0.75, 0.00, 0.75, 1.00, 0.25, 1.00]
+    warp_size: [320, 240]
+    white_hsv_low: [0, 0, 180]       # TODO(확인): 대회장 조명에서 다시 맞춤
+    white_hsv_high: [180, 50, 255]
+    yellow_hsv_low: [15, 80, 100]    # TODO(확인)
+    yellow_hsv_high: [40, 255, 255]
+    lane_width_m: 0.55               # 규정: 차선 폭 550 mm
+    lane_width_px: 160.0             # TODO(확인)
+    meters_per_px_y: 0.004           # TODO(확인)
+    bottom_to_front_wheel_m: 0.15    # TODO(확인): 판정 기준점은 앞바퀴
+    n_windows: 8
+    window_margin_px: 30
+    min_pixels: 40
+    stop_line_row_ratio: 0.55
+    stop_line_min_rows: 4
+
+yolo_detector:
+  ros__parameters:
+    image_topic: /camera/color/image_raw/compressed
+    detections_topic: /autorace/detections
+    weights_path: ""                 # 예: /home/wego/autorace_ws/models/best.pt  TODO(확인)
+    # TODO(확인): 임시 클래스 목록입니다. 라벨링 data.yaml 순서와 반드시 같게 맞추십시오.
+    class_names: [red, yellow, green, pedestrian, left_A, right_B, slow, parking]
+    conf_threshold: 0.5
+    imgsz: 640                       # TODO(확인): 젯슨 속도에 따라 320~416
+    device: ""
+    max_rate_hz: 10.0
+
+lidar_processor:
+  ros__parameters:
+    scan_topic: /scan
+    lidar_info_topic: /autorace/lidar_info
+    angle_offset_rad: 0.0            # TODO(확인): 0 rad = 정면?
+    flip_direction: false            # TODO(확인): 각도 증가 방향
+    range_min_m: 0.08
+    range_max_m: 6.0
+    front_half_angle_deg: 15.0
+    lane_width_m: 0.55
+    occupancy_lookahead_m: 1.2
+    occupancy_min_points: 3
+    cone_max_range_m: 1.2
+    cone_half_angle_deg: 80.0
+    cluster_gap_m: 0.10
+    min_cluster_points: 2
+
+lane_follower:
+  ros__parameters:
+    lane_info_topic: /autorace/lane_info
+    cmd_topic: /autorace/lane_cmd_vel
+    mode: pid                        # pid 또는 stanley
+    speed: 0.35
+    kp: 2.0                          # TODO(확인): 실차 튜닝
+    ki: 0.0
+    kd: 0.2
+    k_heading: 1.0
+    k_stanley: 1.5
+    wheelbase_m: 0.2                 # TODO(확인)
+    max_angular: 1.5
+    integral_limit: 0.5
+    lost_decay: 0.9
+
+mission_manager:
+  ros__parameters:
+    control_rate_hz: 20.0
+    base_speed: 0.35                 # 규정 권고 0.3~0.4 m/s
+    slow_speed: 0.18                 # 서행 0.2 m/s 이하
+    max_linear: 0.4
+    max_angular: 1.5
+    lane_timeout_s: 0.5
+    detection_timeout_s: 0.5
+    lidar_timeout_s: 0.5
+    use_odom: true                   # TODO(확인): /odom 사용 가능 여부
+    odom_topic: /odom                # TODO(확인)

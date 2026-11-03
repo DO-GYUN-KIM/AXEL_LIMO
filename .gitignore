@@ -1,0 +1,22 @@
+# colcon 빌드 결과
+build/
+install/
+log/
+
+# rosbag (용량이 크므로 Git에 올리지 않습니다. 팀 공유 드라이브를 쓰십시오)
+bags/
+*.db3
+*.mcap
+
+# YOLO 가중치 (.pt). models/README.md만 저장소에 둡니다.
+*.pt
+*.onnx
+*.engine
+
+# 라벨링용 프레임
+frames/
+
+# Python
+__pycache__/
+*.pyc
+.vscode/

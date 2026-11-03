@@ -1,0 +1,2 @@
+date,run,battery_pct,start_mission,m5_slow_zone(10),m6_zigzag(15),m3_crosswalk(10),m7_obstacles(10),m2_fork(10),m2_sign,m8_cones(15),m1_traffic_light(15),m4_parking(15),lane_departures,collisions,total,lap_time_s,git_commit,bag_name,notes
+2026-11-03,1,95,start,,,,,,A,,,,,,,,,,예시 행입니다. total = 미션 점수 합 - 차로이탈 - 충돌
