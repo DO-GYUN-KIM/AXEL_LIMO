@@ -1,0 +1,22 @@
+[core]
+reloadable = true
+order = 0
+
+[package]
+version = "0.1.0"
+category = "Simulation"
+title = "limo_ros2_ackermann"
+description = "LIMO Ackermann (AXEL_LIMO team) - WeGo limo_ros2_differential 예제를 애커먼 구동으로 바꾼 것"
+authors = ["AXEL_LIMO"]
+repository = ""
+keywords = ["limo", "ackermann", "ros2"]
+changelog = "docs/CHANGELOG.md"
+readme = "docs/README.md"
+
+[dependencies]
+"omni.kit.uiapp" = {}
+"isaacsim.gui.components" = {}
+"isaacsim.core.api" = {}
+
+[[python.module]]
+name = "limo_ros2_ackermann_python"

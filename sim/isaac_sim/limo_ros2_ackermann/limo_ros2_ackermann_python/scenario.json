@@ -1,0 +1,16 @@
+{
+  "_설명": "트랙·출발 위치·장애물 배치. 단위 m, 각도 도. 파일을 고친 뒤 Isaac Sim에서 예제를 다시 Load 하면 반영됩니다.",
+  "track_usd": "",
+  "track_scale": 1.0,
+  "robot_start": {"x": 0.0, "y": 0.0, "yaw_deg": 0.0},
+  "invert_steering": false,
+  "camera_width": 640,
+  "camera_height": 480,
+  "objects": [
+    {"_설명": "아래는 예시입니다. 3차선 정차 LIMO는 box, 라바콘은 cone"},
+    {"type": "box",  "name": "limo_1", "x": 1.5, "y": 0.0,   "yaw_deg": 0},
+    {"type": "box",  "name": "limo_2", "x": 2.5, "y": 0.55,  "yaw_deg": 0},
+    {"type": "cone", "name": "cone_L1", "x": 4.0, "y": 0.25},
+    {"type": "cone", "name": "cone_R1", "x": 4.0, "y": -0.25}
+  ]
+}
