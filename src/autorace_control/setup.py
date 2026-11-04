@@ -20,6 +20,7 @@ setup(
         'console_scripts': [
             'lane_follower = autorace_control.lane_follower:main',
             'mission_manager = autorace_control.mission_manager:main',
+            'cmd_vel_to_ackermann = autorace_control.cmd_vel_to_ackermann:main',
         ],
     },
 )

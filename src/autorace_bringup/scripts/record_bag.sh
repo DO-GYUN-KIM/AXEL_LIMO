@@ -17,8 +17,9 @@ mkdir -p "${BAG_DIR}"
 TOPICS=(
   /camera/color/image_raw/compressed
   /scan
-  /odom          # TODO(확인): 로봇에서 실제 오도메트리 토픽 이름
+  /odom          # 위키: limo_base 드라이버가 /odom 발행
   /cmd_vel
+  /limo/ack_cmd  # 애커먼 드라이버 실제 입력
 )
 
 echo "[record_bag] 저장: ${OUT}"

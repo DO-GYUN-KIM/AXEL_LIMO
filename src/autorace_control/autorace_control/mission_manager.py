@@ -19,6 +19,7 @@ from std_msgs.msg import Bool, String
 from autorace_interfaces.msg import DetectionArray, LaneInfo, LidarInfo, MissionState, ParkingSlot
 
 from .missions import DEFAULT_ORDER, MISSION_REGISTRY, Cmd, MissionContext
+from .ackermann_math import max_angular as ackermann_max_angular
 from .missions.base import clamp
 
 
@@ -33,6 +34,10 @@ class MissionManager(Node):
         d('slow_speed', 0.18)  # 서행 구간 0.2 m/s 이하
         d('max_linear', 0.4)
         d('max_angular', 1.5)
+        # 애커먼 모드만 씀(2026-11-04 결정): 속도별로 낼 수 있는 각속도까지만 내보냅니다.
+        d('ackermann_limit', True)
+        d('wheelbase_m', 0.2)  # 위키 스펙 축거 200 mm
+        d('max_steering_rad', 0.42)  # 위키: 조향 ±0.42 rad
         d('lane_timeout_s', 0.5)
         d('detection_timeout_s', 0.5)
         d('lidar_timeout_s', 0.5)
@@ -186,7 +191,11 @@ class MissionManager(Node):
         if h.speed_cap is not None:
             vmax = min(vmax, h.speed_cap)
         wmax = self.gp('max_angular')
-        return Cmd(clamp(cmd.linear, -vmax, vmax), clamp(cmd.angular, -wmax, wmax), cmd.source)
+        v = clamp(cmd.linear, -vmax, vmax)
+        if self.gp('ackermann_limit') and abs(v) >= 0.01:
+            # 최소 회전 반경(약 0.45 m) 때문에 느릴수록 낼 수 있는 각속도가 작습니다.
+            wmax = min(wmax, ackermann_max_angular(v, self.gp('wheelbase_m'), self.gp('max_steering_rad')))
+        return Cmd(v, clamp(cmd.angular, -wmax, wmax), cmd.source)
 
     def publish(self, cmd, h, ctx):
         self.last_cmd = cmd
