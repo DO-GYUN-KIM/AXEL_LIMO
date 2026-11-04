@@ -11,6 +11,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/LaneInfo.msg"
   "msg/LidarInfo.msg"
   "msg/MissionState.msg"
+  "msg/ParkingSlot.msg"
   DEPENDENCIES std_msgs
 )
 

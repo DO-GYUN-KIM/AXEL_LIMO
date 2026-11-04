@@ -16,3 +16,7 @@ float32 nearest_cluster_distance
 bool gap_found
 float32 gap_angle              # 통과할 지점 방향 [rad] (양수 = 왼쪽)
 float32 gap_width              # 통과 폭 추정 [m]
+
+# 주차용: 차체 옆(전후 side_window_m 안)의 가장 가까운 물체까지 가로 거리 [m] (없으면 inf)
+float32 side_left_distance
+float32 side_right_distance

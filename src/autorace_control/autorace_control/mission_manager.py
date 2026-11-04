@@ -16,7 +16,7 @@ from nav_msgs.msg import Odometry
 from rclpy.node import Node
 from std_msgs.msg import Bool, String
 
-from autorace_interfaces.msg import DetectionArray, LaneInfo, LidarInfo, MissionState
+from autorace_interfaces.msg import DetectionArray, LaneInfo, LidarInfo, MissionState, ParkingSlot
 
 from .missions import DEFAULT_ORDER, MISSION_REGISTRY, Cmd, MissionContext
 from .missions.base import clamp
@@ -42,6 +42,8 @@ class MissionManager(Node):
         d('lane_cmd_topic', '/autorace/lane_cmd_vel')
         d('detections_topic', '/autorace/detections')
         d('lidar_info_topic', '/autorace/lidar_info')
+        d('parking_slot_topic', '/autorace/parking_slot')
+        d('parking_timeout_s', 0.5)
         d('odom_topic', '/odom')
 
         self.order = list(self.gp('mission_order'))
@@ -63,6 +65,7 @@ class MissionManager(Node):
         self.dets = None
         self.dets_t = None
         self.lidar = self.lidar_t = None
+        self.parking = self.parking_t = None
         self.pose = None
         self.odom_dist = 0.0
         self.cmd_dist = 0.0
@@ -76,6 +79,7 @@ class MissionManager(Node):
         self.create_subscription(Twist, self.gp('lane_cmd_topic'), self.on_lane_cmd, 10)
         self.create_subscription(DetectionArray, self.gp('detections_topic'), self.on_dets, 10)
         self.create_subscription(LidarInfo, self.gp('lidar_info_topic'), self.on_lidar, 10)
+        self.create_subscription(ParkingSlot, self.gp('parking_slot_topic'), self.on_parking, 10)
         self.create_subscription(Odometry, self.gp('odom_topic'), self.on_odom, 10)
         self.create_subscription(Bool, '/autorace/estop', self.on_estop, 10)
         self.create_subscription(String, '/autorace/jump_to', self.on_jump, 10)
@@ -100,6 +104,9 @@ class MissionManager(Node):
 
     def on_lidar(self, msg):
         self.lidar, self.lidar_t = msg, self.now()
+
+    def on_parking(self, msg):
+        self.parking, self.parking_t = msg, self.now()
 
     def on_odom(self, msg):
         p = msg.pose.pose.position
@@ -130,6 +137,7 @@ class MissionManager(Node):
         lane_ok = self.fresh(self.lane_t, self.gp('lane_timeout_s'), now)
         det_ok = self.fresh(self.dets_t, self.gp('detection_timeout_s'), now)
         lidar_ok = self.fresh(self.lidar_t, self.gp('lidar_timeout_s'), now)
+        parking_ok = self.fresh(self.parking_t, self.gp('parking_timeout_s'), now)
         use_odom = self.gp('use_odom') and self.pose is not None
         return MissionContext(
             now=now,
@@ -141,6 +149,7 @@ class MissionManager(Node):
             image_width=self.dets.image_width if det_ok else 0,
             image_height=self.dets.image_height if det_ok else 0,
             lidar=self.lidar if lidar_ok else None,
+            parking=self.parking if parking_ok else None,
             pose=self.pose if use_odom else None,
             traveled=self.odom_dist if use_odom else self.cmd_dist,
         )

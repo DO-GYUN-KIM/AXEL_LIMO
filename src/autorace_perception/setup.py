@@ -21,6 +21,7 @@ setup(
             'lane_detector = autorace_perception.lane_detector:main',
             'yolo_detector = autorace_perception.yolo_detector:main',
             'lidar_processor = autorace_perception.lidar_processor:main',
+            'parking_detector = autorace_perception.parking_detector:main',
         ],
     },
 )

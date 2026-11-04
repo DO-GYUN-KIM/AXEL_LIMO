@@ -1,6 +1,6 @@
 """자율주행 노드 묶음입니다. robot.launch.py와 offline.launch.py가 이 파일을 포함합니다.
 
-실행 노드: lane_detector, yolo_detector, lidar_processor, lane_follower, mission_manager
+실행 노드: lane_detector, yolo_detector, lidar_processor, parking_detector, lane_follower, mission_manager
 """
 import os
 
@@ -44,6 +44,7 @@ def generate_launch_description():
                                                                      value_type=bool)}),
         perception('yolo_detector', condition=IfCondition(LaunchConfiguration('use_yolo'))),
         perception('lidar_processor'),
+        perception('parking_detector'),
         Node(package='autorace_control', executable='lane_follower', name='lane_follower',
              output='screen', parameters=[params_file, sim]),
         Node(package='autorace_control', executable='mission_manager', name='mission_manager',

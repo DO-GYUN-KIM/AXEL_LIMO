@@ -73,7 +73,7 @@ autorace_ws/
 | 6 | `m2_fork` | 갈림길 A/B | 10 | YOLO `left_A`/`right_B` 투표 | 조향 bias로 갈래 선택 (못 보면 `default_branch`) |
 | 7 | `m8_cones` | 라바콘 | 15 | LiDAR 클러스터 | 좌/우 콘 중점으로 조향 |
 | 8 | `m1_traffic_light` | 신호등 | 15 | YOLO `red`/`yellow`/`green` | 빨강/노랑 정지선 정지, 초록 확인 후 출발 |
-| 9 | `m4_parking` | T자 주차 | 15 | YOLO `parking` (임시) | YAML의 단계별 동작 실행 (자리표시) |
+| 9 | `m4_parking` | T자 주차 | 15 | YOLO `parking` (임시) | 전면 진입: 지나치기 → odom으로 90° 회전 → `parking_detector`(칸 선)와 라이다 양옆 거리로 맞추며 진입 → 끝 선 앞 정지 |
 | 10 | `finish` | 도착 | - | - | 정지 |
 
 모든 미션은 `approach`(차선 추종하며 시작 신호 대기) → `active`(동작) 두 단계이며,
@@ -158,7 +158,7 @@ python3 tools/extract_frames.py ~/bags/20261103_101500_lap1 --every 10 --out fra
 |---|---|---|
 | A | 차선 인식, 차선 추종 제어, 상태 머신, 통합, 정지선 정지 | `lane_detector.py`, `lane_follower.py`, `mission_manager.py`, `missions/base.py`, `simple.py`, `stop_line.py` |
 | B | YOLO 데이터 수집/라벨링/학습, 표지판·신호등 검출, M2 갈래 결정, M1 광고 모니터 거르기 | `yolo_detector.py`, `fork.py`, `tools/extract_frames.py`, `models/` |
-| C | LiDAR 가공, M7 장애물 회피, M8 라바콘, M4 주차 | `lidar_processor.py`, `lidar_missions.py`, `parking.py` |
+| C | LiDAR 가공, M7 장애물 회피, M8 라바콘, M4 주차 | `lidar_processor.py`, `lidar_missions.py`, `parking_detector.py`, `parking.py` |
 
 미션 파라미터(`missions.yaml`)는 각 미션 담당자가 고치고, 통합 리허설 전에 A가 한 번에 확인합니다.
 
@@ -201,6 +201,6 @@ python3 tools/extract_frames.py ~/bags/20261103_101500_lap1 --every 10 --out fra
 | 10 | 3차선 구간 진입 차로, 차선 변경 시간/각속도 | 실차 | missions.yaml |
 | 11 | 각 구간 길이 (서행, 3차선, 라바콘), 갈림길 분기점까지 거리 | 트랙 도면 | missions.yaml |
 | 12 | 신호등 옆 광고 모니터 위치, 신호 주기, 초록일 때 정지 필요 여부 | 주최 측 문의 | missions.yaml |
-| 13 | T자 주차 구역 위치와 진입 방향, 주차 표지판 유무 | 트랙 도면 + 실차 | parking.py |
+| 13 | T자 주차: 지정 칸(6칸 중 어디), 칸 크기(DXF), 회전 방향(도면상 오른쪽 추정), 애커먼으로 한 번에 들어가는지, 정지 유지 시간 | 트랙 도면 + 실차 + 주최 측 | parking.py, parking_detector.py |
 | 14 | 출발 신호 방식 | 주최 측 문의 | simple.py |
 | 15 | LIMO Pro 축거 (Stanley 모드 사용 시) | 실측 | params.yaml |

@@ -47,6 +47,7 @@ class MissionContext:
     image_width: int = 0
     image_height: int = 0
     lidar: Optional[object] = None      # LidarInfo (오래되었으면 None)
+    parking: Optional[object] = None    # ParkingSlot (오래되었으면 None)
     pose: Optional[Tuple[float, float, float]] = None  # (x, y, yaw) from /odom
     traveled: float = 0.0               # 누적 주행 거리 [m] (odom 없으면 명령 속도 적분)
 

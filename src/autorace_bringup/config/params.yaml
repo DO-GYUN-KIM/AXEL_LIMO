@@ -54,6 +54,28 @@ lidar_processor:
     cone_half_angle_deg: 80.0
     cluster_gap_m: 0.10
     min_cluster_points: 2
+    side_window_m: 0.20              # 주차용 옆 거리 (차체 중심 전후 범위)
+    side_max_m: 0.60
+
+parking_detector:
+  ros__parameters:
+    image_topic: /camera/color/image_raw/compressed
+    slot_topic: /autorace/parking_slot
+    publish_debug: false
+    # 버드아이 값은 lane_detector와 같게 맞춥니다.
+    warp_src: [0.30, 0.60, 0.70, 0.60, 0.98, 0.95, 0.02, 0.95]   # TODO(확인)
+    warp_dst: [0.25, 0.00, 0.75, 0.00, 0.75, 1.00, 0.25, 1.00]
+    warp_size: [320, 240]
+    white_hsv_low: [0, 0, 180]
+    white_hsv_high: [180, 50, 255]
+    meters_per_px_x: 0.0034          # TODO(확인)
+    meters_per_px_y: 0.004           # TODO(확인)
+    bottom_to_front_wheel_m: 0.15    # TODO(확인)
+    min_line_pixels: 60
+    line_band_px: 12
+    expected_slot_width_m: 0.50      # TODO(확인): DXF에서 칸 폭 측정
+    end_line_row_ratio: 0.6
+    end_line_min_rows: 3
 
 lane_follower:
   ros__parameters:

@@ -41,6 +41,8 @@ class LidarProcessor(Node):
         d('cone_half_angle_deg', 80.0)
         d('cluster_gap_m', 0.10)
         d('min_cluster_points', 2)
+        d('side_window_m', 0.20)  # 주차용: 차체 중심 기준 전후 이 범위 안의 옆 물체만 봅니다
+        d('side_max_m', 0.60)
 
         self.pub = self.create_publisher(LidarInfo, self.gp('lidar_info_topic'), 10)
         # LiDAR는 Best Effort QoS로 나오므로 sensor_data 프로파일로 구독합니다.
@@ -68,6 +70,7 @@ class LidarProcessor(Node):
         out.front_min_distance = float(r[front].min()) if front.any() else float('inf')
         self.fill_lanes(out, x, y)
         self.fill_cones(out, r, a, x, y)
+        self.fill_sides(out, x, y)
         self.pub.publish(out)
 
     def fill_lanes(self, out, x, y):
@@ -85,6 +88,15 @@ class LidarProcessor(Node):
             dist = float(x[sel].min()) if sel.any() else float('inf')
             setattr(out, name + '_lane_occupied', occupied)
             setattr(out, name + '_lane_min_distance', dist)
+
+    def fill_sides(self, out, x, y):
+        """주차 때 양옆 정차 LIMO까지 거리. 시야가 ±110°라 바로 옆(±90°)까지는 보입니다."""
+        win, mx = self.gp('side_window_m'), self.gp('side_max_m')
+        near = np.abs(x) < win
+        left = near & (y > 0) & (y < mx)
+        right = near & (y < 0) & (y > -mx)
+        out.side_left_distance = float(y[left].min()) if left.any() else float('inf')
+        out.side_right_distance = float(-y[right].max()) if right.any() else float('inf')
 
     def clusters(self, x, y):
         """각도 순서로 이웃한 점끼리 거리가 가까우면 한 물체로 묶고, 각 물체의 중심을 돌려줍니다."""
