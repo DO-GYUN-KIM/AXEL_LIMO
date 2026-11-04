@@ -20,3 +20,7 @@ frames/
 __pycache__/
 *.pyc
 .vscode/
+
+# 차량 배포 기록·잠금 (tools/car_deploy.sh)
+DEPLOYED
+.car_lock
