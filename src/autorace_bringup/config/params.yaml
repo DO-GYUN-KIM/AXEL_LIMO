@@ -88,7 +88,7 @@ lane_follower:
     kd: 0.2
     k_heading: 1.0
     k_stanley: 1.5
-    wheelbase_m: 0.2                 # TODO(확인)
+    wheelbase_m: 0.2                 # 위키 스펙 축거 200 mm
     max_angular: 1.5
     integral_limit: 0.5
     lost_decay: 0.9
@@ -100,8 +100,22 @@ mission_manager:
     slow_speed: 0.18                 # 서행 0.2 m/s 이하
     max_linear: 0.4
     max_angular: 1.5
+    ackermann_limit: true            # 속도별 애커먼 한계 각속도로 자름
+    wheelbase_m: 0.2
+    max_steering_rad: 0.42
     lane_timeout_s: 0.5
     detection_timeout_s: 0.5
     lidar_timeout_s: 0.5
     use_odom: true                   # TODO(확인): /odom 사용 가능 여부
     odom_topic: /odom                # TODO(확인)
+
+# /cmd_vel(Twist) → /limo/ack_cmd(AckermannDrive) 변환 (robot.launch.py에서만 실행)
+cmd_vel_to_ackermann:
+  ros__parameters:
+    input_topic: /cmd_vel
+    output_topic: /limo/ack_cmd
+    wheelbase_m: 0.2                 # 위키 스펙 축거 200 mm
+    max_steering_rad: 0.42           # 위키: 조향 -0.42 ~ 0.42 rad
+    steering_sign: 1.0               # TODO(확인): 실차에서 +조향이 왼쪽인지 확인, 반대면 -1.0
+    timeout_sec: 0.3                 # 이 시간 동안 /cmd_vel이 없으면 정지
+    rate_hz: 20.0

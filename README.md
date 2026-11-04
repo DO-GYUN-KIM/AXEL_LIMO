@@ -52,9 +52,15 @@ autorace_ws/
                                     └─> yolo_detector ──> /autorace/detections ─┤                                           │
 /scan ─────────────────────────────────> lidar_processor > /autorace/lidar_info ┤                                           │
 /odom ──────────────────────────────────────────────────────────────────────────┴──────────> mission_manager <──────────────┘
-                                                                                                  ├─> /cmd_vel
+                                                                                                  ├─> /cmd_vel ─> cmd_vel_to_ackermann ─> /limo/ack_cmd ─> LIMO 애커먼 드라이버
                                                                                                   └─> /autorace/mission_state
 ```
+
+- **주행은 애커먼 모드만 씁니다**(2026-11-04 결정). LIMO 애커먼 드라이버(`limo_base_ackerman.launch.py`)는 `/cmd_vel`을 받지 않고
+  `/limo/ack_cmd`(AckermannDrive)만 받으므로, `cmd_vel_to_ackermann`이 조향각 = atan(축거 × w / v)로 바꿔 보냅니다(±0.42 rad로 자름).
+  `robot.launch.py`가 애커먼 드라이버와 이 변환 노드를 같이 띄웁니다. 차 앞 걸쇠를 올려 LED가 **녹색**인지, 조종기 **SWB가 위**인지 확인하십시오.
+- 애커먼은 제자리 회전을 못 하고 느릴수록 낼 수 있는 각속도가 작습니다(0.2 m/s에서 약 0.45 rad/s, 최소 회전 반경 약 0.45 m).
+  mission_manager가 이 한계로 각속도를 자릅니다(`ackermann_limit`).
 
 - `/cmd_vel`은 **mission_manager만** 내보냅니다. lane_follower의 출력은 조향(angular) 참고값이고,
   속도는 미션이 정합니다(`base_speed`, 미션별 `speed`, `speed_cap`, `max_linear`).
@@ -192,7 +198,7 @@ python3 tools/extract_frames.py ~/bags/20261103_101500_lap1 --every 10 --out fra
 | 1 | 카메라 토픽 `/camera/color/image_raw/compressed`가 나오는지, 해상도와 주기 | `ros2 topic hz`, `ros2 topic echo --once ... --field format` | params.yaml |
 | 2 | `/scan` 이름, QoS(Best Effort), 0 rad가 정면인지, 각도가 왼쪽으로 증가하는지 | 차 앞에 물체를 두고 `ranges` 확인 | lidar_processor.py |
 | 3 | **`/odom`이 나오는지(가정입니다)**, 이름, 1 m 주행 시 오차 | 줄자로 1 m 주행 후 비교 | mission_manager.py |
-| 4 | LIMO 베이스 드라이버를 따로 실행해야 하는지 (`/cmd_vel` 수신 확인) | `ros2 topic info /cmd_vel` | robot.launch.py |
+| 4 | 애커먼 드라이버가 `/limo/ack_cmd`를 받는지, **+조향이 왼쪽인지**(반대면 `steering_sign: -1.0`) | `ros2 topic info /limo/ack_cmd`, 바퀴를 보며 `ros2 topic pub` | robot.launch.py, params.yaml |
 | 5 | 젯슨에서 `import ultralytics`가 되는지, YOLO11n 추론 속도(ms) | `python3 -c "import ultralytics"` | yolo_detector.py |
 | 6 | 버드아이 변환 점, 차선 폭 픽셀 수, 세로 m/픽셀, 버드아이 아래 끝 ~ 앞바퀴 거리 | 트랙 위 사진 + 줄자 | params.yaml |
 | 7 | 차선 색 (중앙선 노란색 여부), 대회장 조명에서 HSV 값 | `lane_debug:=true` | params.yaml |

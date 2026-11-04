@@ -12,13 +12,15 @@ class ObstacleLaneMission(MissionHandler):
     lane_index로 현재 몇 번째 차로인지 기억해서 트랙 밖(-2, +2)으로는 바꾸지 않습니다.
     """
     DEFAULTS = {
-        'trigger_distance_m': 0.8,  # 현재 차로 장애물이 이 거리 안에 오면 차선 변경 시작
+        'trigger_distance_m': 1.0,  # 현재 차로 장애물이 이 거리 안에 오면 차선 변경 시작
         'start_lane_index': 0,  # TODO(확인): 3차선 구간 진입 시 차로 (-1 왼쪽, 0 가운데, 1 오른쪽)
         'prefer_side': 'left',
         'speed': 0.2,
-        'turn_angular': 1.0,  # TODO(확인): 차선 폭 0.55 m 이동에 맞게 실차에서 조정
-        'turn_time_s': 0.8,
-        'straight_time_s': 0.6,
+        # 애커먼 최대 조향(0.42 rad)에서 0.2 m/s일 때 낼 수 있는 각속도는 약 0.447 rad/s입니다.
+        # 0.44 rad/s로 2.65 s씩 두 번 꺾으면 옆으로 약 0.55 m, 앞으로 약 0.85 m 갑니다(계산값).
+        'turn_angular': 0.44,  # TODO(확인): 실차 조향이 한계까지 나오는지, 차선 폭 0.55 m에 맞는지
+        'turn_time_s': 2.65,
+        'straight_time_s': 0.0,
         'emergency_stop_m': 0.20,
         'section_length_m': 4.0,  # TODO(확인): 3차선 구간 길이
         'clear_time_s': 2.0,  # 장애물이 이 시간 동안 안 보이고 구간 길이를 지나면 완료

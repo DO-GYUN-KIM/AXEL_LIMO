@@ -16,6 +16,7 @@
 """
 import math
 
+from ..ackermann_math import max_angular
 from .base import STOP, Cmd, MissionHandler, clamp, split_names, wrap_angle
 
 
@@ -30,7 +31,7 @@ class ParkingMission(MissionHandler):
         'turn_direction': -1.0,      # -1 = 오른쪽, +1 = 왼쪽 (도면상 오른쪽으로 추정)
         'turn_angle_deg': 90.0,
         'turn_linear': 0.12,         # 애커먼은 전진하며 꺾어야 합니다
-        'turn_angular': 0.8,         # TODO(확인): 최소 회전 반경 안에서 칸에 들어가는지 실차 확인
+        'turn_angular': 0.8,         # 애커먼 한계(0.12 m/s에서 약 0.27 rad/s)로 잘립니다. 실제 회전 반경 약 0.45 m
         'turn_handoff_deg': 25.0,    # 남은 회전이 이 값 이하이고 칸 선이 보이면 enter로
         'enter_speed': 0.08,
         'creep_speed': 0.04,
@@ -102,7 +103,9 @@ class ParkingMission(MissionHandler):
                 self.last_yaw = ctx.pose[2]
             else:
                 # odom이 없으면 명령 각속도를 적분한 값으로 대신합니다(부정확).
-                self.turned += abs(self.p['turn_angular']) * 0.05  # TODO(확인): 제어 주기 50 ms 가정
+                # 애커먼 한계로 실제 각속도는 turn_angular보다 작을 수 있어 낼 수 있는 값으로 적분합니다.
+                w_real = min(abs(self.p['turn_angular']), max_angular(self.p['turn_linear']))
+                self.turned += w_real * 0.05  # TODO(확인): 제어 주기 50 ms 가정
             left = target - self.turned
             s = ctx.parking
             if s is not None and s.slot_valid and left <= math.radians(self.p['turn_handoff_deg']):
