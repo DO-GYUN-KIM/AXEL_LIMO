@@ -1,0 +1,170 @@
+{
+  "_설명": "트랙·출발 위치·장애물 배치. 단위 m, 각도 도. 좌표 원점은 트랙 보드 왼쪽 아래 모서리(10 x 6 m). 고친 뒤 예제를 다시 Load 하면 반영됩니다.",
+  "track_usd": "track/autorace2026.usda",
+  "track_scale": 1.0,
+  "robot_start": "start",
+  "start_presets": {
+    "_설명": "robot_start에 이름을 넣으면 그 위치에서 시작합니다",
+    "start": {
+      "x": 0.75,
+      "y": 5.58,
+      "yaw_deg": 0
+    },
+    "m7": {
+      "x": 8.85,
+      "y": 0.94,
+      "yaw_deg": 180
+    },
+    "m8": {
+      "x": 0.72,
+      "y": 1.6,
+      "yaw_deg": 90
+    },
+    "parking": {
+      "x": 5.75,
+      "y": 4.84,
+      "yaw_deg": 0
+    }
+  },
+  "invert_steering": false,
+  "camera_width": 640,
+  "camera_height": 480,
+  "objects": [
+    {
+      "_설명": "M7 3차선 정차 LIMO 7대. 실제 배치는 대회 당일 주최 측이 정하므로 아래는 연습용 예시(추정)입니다. 차로 중심 y: 1차로 0.42(A쪽), 2차로 0.94(가운데), 3차로 1.46(B쪽). 3차선 구간 x 4.30~8.36 m, 진행 방향 -x"
+    },
+    {
+      "type": "box",
+      "name": "m7_limo_1",
+      "x": 7.8,
+      "y": 0.94,
+      "yaw_deg": 180
+    },
+    {
+      "type": "box",
+      "name": "m7_limo_2",
+      "x": 7.0,
+      "y": 0.42,
+      "yaw_deg": 180
+    },
+    {
+      "type": "box",
+      "name": "m7_limo_3",
+      "x": 7.0,
+      "y": 1.46,
+      "yaw_deg": 180
+    },
+    {
+      "type": "box",
+      "name": "m7_limo_4",
+      "x": 6.2,
+      "y": 0.94,
+      "yaw_deg": 180
+    },
+    {
+      "type": "box",
+      "name": "m7_limo_5",
+      "x": 5.4,
+      "y": 0.42,
+      "yaw_deg": 180
+    },
+    {
+      "type": "box",
+      "name": "m7_limo_6",
+      "x": 5.4,
+      "y": 1.46,
+      "yaw_deg": 180
+    },
+    {
+      "type": "box",
+      "name": "m7_limo_7",
+      "x": 4.7,
+      "y": 0.94,
+      "yaw_deg": 180
+    },
+    {
+      "_설명": "M8 라바콘 8개. 왼쪽 직선 구간(x 0.72 m 중심, y 1.84~3.94 m), 진행 방향 +y. 두 개씩 문을 만들고 좌우로 엇갈리게 둔 예시(추정). 콘 크기도 추정값이니 실측해 바꾸십시오"
+    },
+    {
+      "type": "cone",
+      "name": "m8_cone_1",
+      "x": 0.45,
+      "y": 2.15,
+      "radius": 0.05,
+      "height": 0.2
+    },
+    {
+      "type": "cone",
+      "name": "m8_cone_2",
+      "x": 0.85,
+      "y": 2.15,
+      "radius": 0.05,
+      "height": 0.2
+    },
+    {
+      "type": "cone",
+      "name": "m8_cone_3",
+      "x": 0.6,
+      "y": 2.6,
+      "radius": 0.05,
+      "height": 0.2
+    },
+    {
+      "type": "cone",
+      "name": "m8_cone_4",
+      "x": 1.0,
+      "y": 2.6,
+      "radius": 0.05,
+      "height": 0.2
+    },
+    {
+      "type": "cone",
+      "name": "m8_cone_5",
+      "x": 0.45,
+      "y": 3.05,
+      "radius": 0.05,
+      "height": 0.2
+    },
+    {
+      "type": "cone",
+      "name": "m8_cone_6",
+      "x": 0.85,
+      "y": 3.05,
+      "radius": 0.05,
+      "height": 0.2
+    },
+    {
+      "type": "cone",
+      "name": "m8_cone_7",
+      "x": 0.6,
+      "y": 3.5,
+      "radius": 0.05,
+      "height": 0.2
+    },
+    {
+      "type": "cone",
+      "name": "m8_cone_8",
+      "x": 1.0,
+      "y": 3.5,
+      "radius": 0.05,
+      "height": 0.2
+    },
+    {
+      "_설명": "M4 T자 주차: 주차 칸 양옆 정차 LIMO 예시. 위쪽 줄 가운데 칸(x 6.88, y 4.27)을 목표로 가정(추정)"
+    },
+    {
+      "type": "box",
+      "name": "park_limo_L",
+      "x": 6.36,
+      "y": 4.27,
+      "yaw_deg": 90
+    },
+    {
+      "type": "box",
+      "name": "park_limo_R",
+      "x": 7.4,
+      "y": 4.27,
+      "yaw_deg": 90
+    }
+  ]
+}
