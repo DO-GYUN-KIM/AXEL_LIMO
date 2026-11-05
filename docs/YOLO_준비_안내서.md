@@ -105,7 +105,23 @@ rqt_image_view /yolo                          # 박스 그린 화면으로
 
 - 대회에 안 나오는 클래스(0, 2)도 **지우지 않습니다.** 지우면 주최 라벨 925개의 번호를 모두 고쳐야 합니다. 남겨 두어도 손해가 없습니다.
 - A/B 표지판 실물이 화살표 모양이라면 이름을 `sign_left`, `sign_right`처럼 실제 뜻에 맞게 바꿔도 됩니다. 단, **오늘 정한 이름을 끝까지** 씁니다.
-- 정한 목록은 저장소 `docs/YOLO_준비_안내서.md`의 이 표를 고쳐서 팀에 알립니다. A가 주행 코드에서 이 이름을 그대로 씁니다(8장).
+- 정한 목록은 저장소 `docs/YOLO_준비_안내서.md`의 이 표를 고쳐서 팀에 알립니다.
+
+### 3-1. 코드 쪽 이름도 같은 날 맞춥니다 (필수)
+모델이 내보내는 `class_name`과 주행 코드 설정의 이름이 한 글자라도 다르면 **미션이 시작되지 않습니다.** 지금 저장소 설정은 임시 이름(`slow`, `red`, `green` …)이라, 주최 `best.pt`를 올리면 **M5 서행과 M1 신호등이 아예 동작하지 않습니다.** 클래스 목록을 확정하는 날, 아래 표대로 코드 설정도 함께 고칩니다(A와 B가 같이 확인).
+
+| 파일 · 항목 | 지금 값 | 바꿀 값 (권장안 기준) |
+|---|---|---|
+| `missions.yaml` M5 `trigger_classes` | `slow` | `slow_down` |
+| `missions.yaml` M1 `stop_classes` | `red,yellow` | `red_light,yellow_light` |
+| `missions.yaml` M1 `go_classes` | `green` | `green_light` |
+| `missions.yaml` M3 `trigger_classes` | `pedestrian` | `pedestrian` (그대로) |
+| `missions.yaml` M2 `left_class` / `right_class` | `left_A` / `right_B` | `sign_A` / `sign_B` (A/B 중 어느 쪽이 왼쪽인지 실물로 확인) |
+| `missions.yaml` M4 `trigger_classes` | `parking` | 주차 표지판이 있으면 `parking`(9번), 없으면 비움 |
+| `params.yaml` `yolo_detector.class_names` | `[red, yellow, green, pedestrian, left_A, right_B, slow, parking]` | 3장 표 순서 그대로 0~8(9) |
+| 각 미션 `.py`의 기본값(`stop_line.py`, `simple.py`, `fork.py`) | 위와 같은 임시 이름 | 같은 값으로 (yaml이 없을 때 쓰는 값이므로 맞춰 둠) |
+
+**확인 방법**: 차에서 `ros2 topic echo /yolo_bounding_boxes`로 실제 나오는 `class_name`을 보고, 그 글자를 그대로 복사해 위 설정에 넣습니다. 모델을 바꿀 때마다(v1, v2 …) 한 번씩 다시 확인합니다.
 
 ---
 
@@ -304,7 +320,7 @@ B → A 전달 형식은 주최 메시지를 그대로 씁니다.
 ```
 - **우리 저장소 현재 상태와 다른 점** (A가 고칠 일, 11/7까지):
   - 뼈대의 `yolo_detector` 노드는 `.pt`를 직접 돌리고 `/autorace/detections`를 냅니다. 주최 노드(TensorRT)가 더 빠르므로 `mission_manager`가 `/yolo_bounding_boxes`를 받도록 바꾸고, 뼈대 노드는 예비로 둡니다.
-  - `params.yaml`의 `class_names`(`red, yellow, ...`)와 `missions.yaml`의 `trigger_classes`(`slow`, `pedestrian`, `parking`)를 **3장에서 확정한 이름**(`red_light`, `slow_down`, `sign_A` 등)으로 맞춥니다. 모델 안의 이름이 그대로 `class_name`으로 나옵니다.
+  - 클래스 이름 맞추기는 **3-1의 표**대로 합니다. 이것을 안 하면 M5·M1이 시작되지 않습니다.
 - **얼마나 가까워야 반응할지(박스 면적 기준)** 는 B가 정해 A에게 넘깁니다. 주최 기본값은 표지판 2,700 / 적·녹색등 7,000 / 보행자 4,000 px²입니다. 정지선 위치에 차를 세워 두고 그때의 박스 면적을 재서 정합니다.
 - **한 장면만 보고 결정하지 않습니다.** 같은 클래스가 연속 3~5회 나올 때 인정하도록 A와 합의합니다. 오검출 한 번에 차가 서는 것을 막습니다.
 - **신호등 판단**: 광고 모니터 대책으로 ① 모니터 장면을 배경으로 학습 ② 박스 위치(모니터는 화면 어느 쪽에 나오는지)와 크기로 거르기를 함께 씁니다. ②의 기준은 실제 대회 소품 배치를 보고 정합니다 **(확인 필요: 모니터 위치)**.
@@ -331,7 +347,7 @@ B → A 전달 형식은 주최 메시지를 그대로 씁니다.
 
 | 날짜 | 할 일 | 끝났다는 기준 |
 |---|---|---|
-| 11/5 | 0단계 시험, 클래스 확정, 데스크탑 환경 | 확인표 채움, 클래스 표 확정, GPU True |
+| 11/5 | 0단계 시험, 클래스 확정, **코드 쪽 이름 맞추기(3-1)**, 데스크탑 환경 | 확인표 채움, 클래스 표 확정, 설정 이름 일치, GPU True |
 | 11/5~11/7 | A/B·보행자·황색등·모니터 촬영과 라벨링 | `prepare_dataset.py` 표에서 "부족" 없음 |
 | 11/7 밤 | **1차 학습 (v1)** | 미션 클래스 mAP50 0.9 이상 |
 | 11/8 | Jetson 변환·실차 확인, FPS, 박스 면적 기준 측정 | 10Hz 이상, 면적 기준 A에게 전달 |
