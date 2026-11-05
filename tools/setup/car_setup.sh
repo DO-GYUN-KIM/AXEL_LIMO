@@ -88,6 +88,8 @@ $MARK_BEGIN
 [ -f \$HOME/wego_ws/install/setup.bash ] && source \$HOME/wego_ws/install/setup.bash
 [ -f $WS/install/setup.bash ] && source $WS/install/setup.bash
 export ROS_DOMAIN_ID=$DOMAIN
+# 녹화 형식: mcap (Windows Foxglove에서 바로 열림, install 단계에서 플러그인 설치)
+export BAG_STORAGE=mcap
 alias deploy='bash $WS/tools/car_deploy.sh'
 alias bag='bash $WS/src/autorace_bringup/scripts/record_bag.sh'
 alias viz='ros2 launch foxglove_bridge foxglove_bridge_launch.xml'
