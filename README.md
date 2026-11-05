@@ -135,11 +135,13 @@ ros2 run rqt_image_view rqt_image_view /autorace/lane_debug/compressed
 ### rosbag 녹화
 
 ```bash
-bash src/autorace_bringup/scripts/record_bag.sh lap1
-bash src/autorace_bringup/scripts/record_bag.sh m1_test /autorace/mission_state /autorace/lane_info
+bash src/autorace_bringup/scripts/record_bag.sh lap1            # lap: 센서 + 차량 상태 + /limo/ack_cmd
+bash src/autorace_bringup/scripts/record_bag.sh m1_test debug   # debug: lap + 우리 노드 출력 /autorace/*
+bash src/autorace_bringup/scripts/record_bag.sh signs yolo      # yolo: 카메라만 (학습 사진용)
 ```
 
-기본 녹화 토픽: `/camera/color/image_raw/compressed /scan /odom /cmd_vel`. 저장 위치는 `~/bags`(`BAG_DIR`로 변경)입니다.
+저장 위치는 `~/bags`(`BAG_DIR`로 변경), 형식은 sqlite3(`BAG_STORAGE=mcap`으로 변경)입니다.
+미션별 녹화 계획·재생 안전 설정(`ROS_DOMAIN_ID`)·용량 주의는 `docs/rosbag_활용_안내.md`를 보십시오.
 
 ### YOLO 라벨링용 프레임 뽑기
 
