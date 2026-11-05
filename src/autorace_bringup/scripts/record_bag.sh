@@ -24,4 +24,11 @@ TOPICS=(
 echo "[record_bag] 저장: ${OUT}"
 echo "[record_bag] 토픽: ${TOPICS[*]} $*"
 echo "[record_bag] Ctrl+C로 끝냅니다. 배터리 잔량을 score_sheet.csv에 적어 두십시오."
-exec ros2 bag record -o "${OUT}" "${TOPICS[@]}" "$@"
+# mcap 플러그인(ros-humble-rosbag2-storage-mcap)이 있으면 mcap으로 저장합니다. Windows Foxglove에서 바로 열립니다.
+STORAGE=()
+if ros2 bag record --help 2>/dev/null | grep -q -- '--storage' && \
+   [ -d /opt/ros/humble/share/rosbag2_storage_mcap ]; then
+  STORAGE=(-s mcap)
+fi
+echo "[record_bag] 형식: ${STORAGE[*]:-sqlite3(기본)}"
+exec ros2 bag record -o "${OUT}" "${STORAGE[@]}" "${TOPICS[@]}" "$@"
