@@ -1,167 +1,184 @@
 #!/usr/bin/env python3
-"""대회 트랙 도면(DXF)을 Isaac Sim용 USD 바닥 트랙으로 바꿉니다.
+"""대회 트랙 도면(DXF)을 Isaac Sim용 바닥 트랙(USD + 바닥 그림 PNG)으로 바꿉니다.
 
-도면의 선(LINE, LWPOLYLINE, POLYLINE, ARC, CIRCLE, SPLINE)을 폭이 있는 평평한 띠(차선 테이프)로 만들고,
-그 아래에 충돌이 있는 바닥판을 깝니다. 선 색은 도면의 색(ACI/트루컬러)을 그대로 씁니다.
+대회 도면(2026Track 도면 시트1.dxf)은 테이프를 '윤곽선 두 줄'로 그려 두었습니다.
+그래서 선을 그대로 띠로 만들지 않고, 도면을 고해상도 그림으로 그린 뒤
+'폭이 좁은 닫힌 칸'(= 테이프, 횡단보도 블록, 글자 획)만 칠해 실제 노면처럼 만듭니다.
+주최 측 PNG(2026Track.png)를 주면 각 테이프의 색(흰색/주황)을 그 그림에서 가져옵니다.
 
-준비:  python3 -m pip install ezdxf usd-core
-사용:
-  python3 dxf_to_usd.py 트랙.dxf --list-layers                # 레이어 이름과 선 개수만 보기
-  python3 dxf_to_usd.py 트랙.dxf -o track.usda                 # 전부 변환
-  python3 dxf_to_usd.py 트랙.dxf -o track.usda --layers 차선,정지선 --line-width 0.03
+준비:  python3 -m pip install ezdxf usd-core numpy scipy pillow
+사용 (대회 도면은 1:30 축척이라 도면 1단위 = 0.03 m):
+  python3 dxf_to_usd.py "2026Track 도면 시트1.dxf" --unit 0.03 --ref-png 2026Track.png \
+          -o ../limo_ros2_ackermann/limo_ros2_ackermann_python/track/autorace2026.usda
 
-결과 좌표: 도면 왼쪽 아래 모서리가 (0,0), 단위 m. 실행이 끝나면 트랙 크기를 출력합니다.
-scenario.json의 "track_usd"에 결과 파일 경로를 넣으십시오.
+결과: <출력>.usda 와 같은 폴더의 <출력>_floor.png.
+좌표: 도면 바깥 테두리(보드) 왼쪽 아래 모서리 = (0,0), x 오른쪽, y 위쪽, 단위 m.
 """
 import argparse
-import math
+import os
 import sys
 
 import ezdxf
-from ezdxf import colors, path as dxfpath
+import numpy as np
+from ezdxf import path as dxfpath
+from PIL import Image, ImageDraw
 from pxr import Gf, Sdf, Usd, UsdGeom, UsdPhysics, UsdShade, Vt
+from scipy import ndimage as ndi
 
-UNIT_TO_M = {0: None, 1: 0.0254, 2: 0.3048, 4: 0.001, 5: 0.01, 6: 1.0}  # $INSUNITS
 KINDS = ('LINE', 'LWPOLYLINE', 'POLYLINE', 'ARC', 'CIRCLE', 'SPLINE', 'ELLIPSE')
+FLOOR = (54, 52, 46)      # 주최 측 그림의 바닥색
+WHITE = (223, 218, 202)
+ORANGE = (229, 170, 67)
 
 
-def entities(msp, layers):
-    for e in msp:
-        if e.dxftype() not in KINDS:
+def load_polylines(dxf, layers, unit):
+    doc = ezdxf.readfile(dxf)
+    out = []
+    for e in doc.modelspace():
+        if e.dxftype() not in KINDS or (layers and e.dxf.layer not in layers):
             continue
-        if layers and e.dxf.layer not in layers:
+        try:
+            pts = [(v.x * unit, v.y * unit) for v in dxfpath.make_path(e).flattening(0.0005 / unit)]
+        except Exception:
             continue
-        yield e
+        if len(pts) >= 2:
+            out.append(pts)
+    return out
 
 
-def entity_rgb(doc, e):
-    try:
-        if e.rgb:
-            return tuple(c / 255 for c in e.rgb)
-        aci = e.dxf.color
-        if aci in (0, 256):  # BYBLOCK/BYLAYER
-            aci = doc.layers.get(e.dxf.layer).color
-        r, g, b = colors.aci2rgb(abs(aci))
-        if (r, g, b) == (0, 0, 0):
-            return (1.0, 1.0, 1.0)
-        return (r / 255, g / 255, b / 255)
-    except Exception:
-        return (1.0, 1.0, 1.0)
-
-
-def strip_quads(pts, half_w):
-    """점 열을 폭 2*half_w의 사각형 띠들로 만듭니다(꺾이는 곳은 겹쳐 그림)."""
-    verts, faces = [], []
-    for (x0, y0), (x1, y1) in zip(pts[:-1], pts[1:]):
-        dx, dy = x1 - x0, y1 - y0
-        n = math.hypot(dx, dy)
-        if n < 1e-9:
-            continue
-        nx, ny = -dy / n * half_w, dx / n * half_w
-        k = len(verts)
-        verts += [(x0 + nx, y0 + ny), (x0 - nx, y0 - ny), (x1 - nx, y1 - ny), (x1 + nx, y1 + ny)]
-        faces.append((k, k + 1, k + 2, k + 3))
-    return verts, faces
+def ref_masks(ref_png, shape):
+    """주최 측 그림에서 보드 영역을 찾아 우리 그림 크기로 맞춘 흰색/주황 마스크를 돌려줍니다."""
+    im = np.asarray(Image.open(ref_png).convert('RGB')).astype(int)
+    floor = (np.abs(im - np.array(FLOOR)).sum(axis=2) < 20)
+    ys, xs = np.where(floor)
+    crop = im[ys.min():ys.max() + 1, xs.min():xs.max() + 1]
+    out = []
+    for c, tol in ((WHITE, 90), (ORANGE, 90)):
+        m = np.abs(crop - np.array(c)).sum(axis=2) < tol
+        out.append(np.asarray(Image.fromarray(m.astype(np.uint8) * 255).resize((shape[1], shape[0]), Image.NEAREST)) > 0)
+    return out
 
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument('dxf')
     ap.add_argument('-o', '--out', default='track.usda')
-    ap.add_argument('--list-layers', action='store_true')
-    ap.add_argument('--layers', default='', help='쉼표로 구분한 레이어 이름. 비우면 전부')
-    ap.add_argument('--unit', type=float, default=0.0,
-                    help='도면 1단위가 몇 m인지. 0이면 도면의 $INSUNITS를 따르고, 그것도 없으면 mm로 봅니다')
-    ap.add_argument('--line-width', type=float, default=0.03, help='차선 테이프 폭 m (추정 기본값 3 cm)')
-    ap.add_argument('--margin', type=float, default=0.5, help='바닥판 여유 m')
-    ap.add_argument('--tolerance', type=float, default=0.005, help='곡선 근사 허용 오차 m')
-    ap.add_argument('--floor-rgb', default='0.12,0.12,0.12')
+    ap.add_argument('--unit', type=float, required=True, help='도면 1단위가 몇 m인지 (대회 도면: 0.03)')
+    ap.add_argument('--layers', default='Visible', help='쉼표 구분. 대회 도면은 Visible (치수선 제외)')
+    ap.add_argument('--px-mm', type=float, default=2.0, help='바닥 그림 1픽셀 크기 mm')
+    ap.add_argument('--max-fill-mm', type=float, default=100.0,
+                    help='이 폭 이하의 닫힌 칸만 칠합니다 (테이프 20 mm, 횡단보도 블록 약 70 mm, 마름모 안쪽 약 130 mm는 안 칠함)')
+    ap.add_argument('--ref-png', default='', help='주최 측 트랙 그림. 주면 테이프 색을 여기서 가져옴')
     a = ap.parse_args()
 
-    doc = ezdxf.readfile(a.dxf)
-    msp = doc.modelspace()
-
-    if a.list_layers:
-        cnt = {}
-        for e in entities(msp, None):
-            cnt[e.dxf.layer] = cnt.get(e.dxf.layer, 0) + 1
-        for k, v in sorted(cnt.items(), key=lambda kv: -kv[1]):
-            print(f'{v:6d}  {k}')
-        print('$INSUNITS =', doc.header.get('$INSUNITS', 0))
-        return
-
-    unit = a.unit or UNIT_TO_M.get(doc.header.get('$INSUNITS', 0)) or 0.001
-    layers = set(s for s in a.layers.split(',') if s)
-
-    polylines = []  # (rgb, [(x,y), ...]) 단위 m
-    for e in entities(msp, layers):
-        try:
-            p = dxfpath.make_path(e)
-        except Exception:
-            continue
-        pts = [(v.x * unit, v.y * unit) for v in p.flattening(a.tolerance / unit)]
-        if len(pts) >= 2:
-            polylines.append((entity_rgb(doc, e), pts))
-    if not polylines:
-        sys.exit('변환할 선이 없습니다. --list-layers로 레이어 이름을 확인하십시오.')
-
-    xs = [x for _, pts in polylines for x, _ in pts]
-    ys = [y for _, pts in polylines for _, y in pts]
+    polys = load_polylines(a.dxf, set(s for s in a.layers.split(',') if s), a.unit)
+    if not polys:
+        sys.exit('선이 없습니다. --layers 를 확인하십시오.')
+    xs = [x for p in polys for x, _ in p]
+    ys = [y for p in polys for _, y in p]
     ox, oy = min(xs), min(ys)
-    w, h = max(xs) - ox, max(ys) - oy
+    W, H = max(xs) - ox, max(ys) - oy
+    px = a.px_mm / 1000.0
+    nx, ny = int(round(W / px)) + 1, int(round(H / px)) + 1
+    print(f'보드 크기 {W:.3f} x {H:.3f} m, 그림 {nx} x {ny} px')
 
+    # 1) 윤곽선 그리기 (그림 위쪽 = +y)
+    edge_img = Image.new('L', (nx, ny), 0)
+    dr = ImageDraw.Draw(edge_img)
+    for p in polys:
+        dr.line([((x - ox) / px, (H - (y - oy)) / px) for x, y in p], fill=255, width=1)
+    edge = np.asarray(edge_img) > 0
+
+    # 2) 닫힌 칸 중 좁은 것만 칠하기
+    lab, n = ndi.label(~edge)
+    dist = ndi.distance_transform_edt(~edge)
+    maxd = ndi.maximum(dist, lab, index=np.arange(1, n + 1))
+    border = set(np.unique(np.concatenate([lab[0], lab[-1], lab[:, 0], lab[:, -1]]))) - {0}
+    half = a.max_fill_mm / 2 / a.px_mm
+    fill_ids = np.array([i + 1 for i, d in enumerate(maxd) if d <= half and (i + 1) not in border])
+    filled = np.isin(lab, fill_ids)
+    tape = filled | (edge & ndi.binary_dilation(filled, iterations=2))
+    print(f'칠한 칸 {len(fill_ids)}개 / 전체 {n}개')
+
+    # 3) 색 정하기
+    rgb = np.empty((ny, nx, 3), np.uint8)
+    rgb[:] = FLOOR
+    if a.ref_png:
+        # 주최 측 그림으로 칸마다 칠할지·무슨 색인지 정합니다.
+        #  - 폭 15~30 mm 칸(테이프 한 줄)은 항상 칠함 (점선처럼 주최 그림과 위치가 조금 어긋나도 살림)
+        #  - 그보다 넓은 칸은 주최 그림에서 15% 이상이 테이프 색일 때만 칠함 (횡단보도 블록 사이, 글자 속 빈칸 제외)
+        #  - 색은 주황 표가 흰색 표보다 많으면 주황, 아니면 흰색
+        wm, om = (ndi.binary_dilation(m, iterations=2) for m in ref_masks(a.ref_png, tape.shape)[:2])
+        idx = np.arange(1, n + 1)
+        area = ndi.sum(np.ones_like(lab), lab, idx)
+        wv, ov = ndi.sum(wm, lab, idx), ndi.sum(om, lab, idx)
+        region_cls = np.full(n + 1, -1)
+        filled[:] = False
+        for i in fill_ids:
+            width_mm = 2 * maxd[i - 1] * a.px_mm
+            frac = (wv[i - 1] + ov[i - 1]) / area[i - 1]
+            if (15 <= width_mm <= 30) or frac >= 0.15:
+                filled[lab == i] = True
+                region_cls[i] = 1 if ov[i - 1] > wv[i - 1] else 0
+        tape = filled | (edge & ndi.binary_dilation(filled, iterations=2))
+        cls_map = region_cls[lab]
+        _, (iy, ix) = ndi.distance_transform_edt(~filled, return_indices=True)
+        cls_map = np.where(filled, cls_map, cls_map[iy, ix])  # 윤곽선은 가장 가까운 칠한 칸의 색
+        rgb[tape & (cls_map == 0)] = WHITE
+        rgb[tape & (cls_map == 1)] = ORANGE
+        print('테이프 색: 흰색 %d, 주황 %d 픽셀' % (int((tape & (cls_map == 0)).sum()), int((tape & (cls_map == 1)).sum())))
+    else:
+        rgb[tape] = WHITE
+
+    out_dir = os.path.dirname(os.path.abspath(a.out))
+    os.makedirs(out_dir, exist_ok=True)
+    base = os.path.splitext(os.path.basename(a.out))[0]
+    png_name = base + '_floor.png'
+    Image.fromarray(rgb).save(os.path.join(out_dir, png_name), optimize=True)
+
+    # 4) USD: 그림을 붙인 바닥판(보이는 것) + 충돌용 얇은 상자(안 보이는 것)
     stage = Usd.Stage.CreateNew(a.out)
     UsdGeom.SetStageUpAxis(stage, UsdGeom.Tokens.z)
     UsdGeom.SetStageMetersPerUnit(stage, 1.0)
     root = UsdGeom.Xform.Define(stage, '/Track')
     stage.SetDefaultPrim(root.GetPrim())
 
-    def material(name, rgb, rough=0.6):
-        m = UsdShade.Material.Define(stage, f'/Track/Looks/{name}')
-        sh = UsdShade.Shader.Define(stage, f'/Track/Looks/{name}/Shader')
-        sh.CreateIdAttr('UsdPreviewSurface')
-        sh.CreateInput('diffuseColor', Sdf.ValueTypeNames.Color3f).Set(Gf.Vec3f(*rgb))
-        sh.CreateInput('roughness', Sdf.ValueTypeNames.Float).Set(rough)
-        m.CreateSurfaceOutput().ConnectToSource(sh.ConnectableAPI(), 'surface')
-        return m
+    mesh = UsdGeom.Mesh.Define(stage, '/Track/Floor')
+    mesh.CreatePointsAttr(Vt.Vec3fArray([Gf.Vec3f(0, 0, 0), Gf.Vec3f(W, 0, 0), Gf.Vec3f(W, H, 0), Gf.Vec3f(0, H, 0)]))
+    mesh.CreateFaceVertexCountsAttr(Vt.IntArray([4]))
+    mesh.CreateFaceVertexIndicesAttr(Vt.IntArray([0, 1, 2, 3]))
+    mesh.CreateNormalsAttr(Vt.Vec3fArray([Gf.Vec3f(0, 0, 1)] * 4))
+    mesh.SetNormalsInterpolation(UsdGeom.Tokens.vertex)
+    st = UsdGeom.PrimvarsAPI(mesh).CreatePrimvar('st', Sdf.ValueTypeNames.TexCoord2fArray, UsdGeom.Tokens.vertex)
+    st.Set(Vt.Vec2fArray([Gf.Vec2f(0, 0), Gf.Vec2f(1, 0), Gf.Vec2f(1, 1), Gf.Vec2f(0, 1)]))
 
-    # 바닥판 (충돌 있음, 윗면 z=0)
-    floor = UsdGeom.Cube.Define(stage, '/Track/Floor')
-    floor.CreateSizeAttr(1.0)
-    xf = UsdGeom.Xformable(floor)
-    xf.AddTranslateOp().Set(Gf.Vec3d(w / 2, h / 2, -0.01))
-    xf.AddScaleOp().Set(Gf.Vec3f(w + 2 * a.margin, h + 2 * a.margin, 0.02))
-    UsdPhysics.CollisionAPI.Apply(floor.GetPrim())
-    UsdShade.MaterialBindingAPI.Apply(floor.GetPrim()).Bind(
-        material('Floor', tuple(float(c) for c in a.floor_rgb.split(','))))
+    mat = UsdShade.Material.Define(stage, '/Track/Looks/FloorMat')
+    sh = UsdShade.Shader.Define(stage, '/Track/Looks/FloorMat/Surface')
+    sh.CreateIdAttr('UsdPreviewSurface')
+    sh.CreateInput('roughness', Sdf.ValueTypeNames.Float).Set(0.7)
+    reader = UsdShade.Shader.Define(stage, '/Track/Looks/FloorMat/StReader')
+    reader.CreateIdAttr('UsdPrimvarReader_float2')
+    reader.CreateInput('varname', Sdf.ValueTypeNames.Token).Set('st')
+    tex = UsdShade.Shader.Define(stage, '/Track/Looks/FloorMat/Texture')
+    tex.CreateIdAttr('UsdUVTexture')
+    tex.CreateInput('file', Sdf.ValueTypeNames.Asset).Set('./' + png_name)
+    tex.CreateInput('st', Sdf.ValueTypeNames.Float2).ConnectToSource(reader.ConnectableAPI(), 'result')
+    tex.CreateInput('sourceColorSpace', Sdf.ValueTypeNames.Token).Set('sRGB')
+    tex.CreateOutput('rgb', Sdf.ValueTypeNames.Float3)
+    sh.CreateInput('diffuseColor', Sdf.ValueTypeNames.Color3f).ConnectToSource(tex.ConnectableAPI(), 'rgb')
+    mat.CreateSurfaceOutput().ConnectToSource(sh.ConnectableAPI(), 'surface')
+    UsdShade.MaterialBindingAPI.Apply(mesh.GetPrim()).Bind(mat)
 
-    # 선은 색별로 메시 하나 (충돌 없음, 바닥 1 mm 위)
-    by_color = {}
-    for rgb, pts in polylines:
-        key = tuple(round(c, 3) for c in rgb)
-        by_color.setdefault(key, []).append([(x - ox, y - oy) for x, y in pts])
-    for i, (rgb, plist) in enumerate(by_color.items()):
-        V, F = [], []
-        for pts in plist:
-            v, f = strip_quads(pts, a.line_width / 2)
-            base = len(V)
-            V += v
-            F += [tuple(base + j for j in q) for q in f]
-        mesh = UsdGeom.Mesh.Define(stage, f'/Track/Lines_{i}')
-        mesh.CreatePointsAttr(Vt.Vec3fArray([Gf.Vec3f(x, y, 0.001) for x, y in V]))
-        mesh.CreateFaceVertexCountsAttr(Vt.IntArray([4] * len(F)))
-        mesh.CreateFaceVertexIndicesAttr(Vt.IntArray([j for q in F for j in q]))
-        mesh.CreateNormalsAttr(Vt.Vec3fArray([Gf.Vec3f(0, 0, 1)] * len(V)))
-        mesh.SetNormalsInterpolation(UsdGeom.Tokens.vertex)
-        mesh.CreateDoubleSidedAttr(True)
-        UsdShade.MaterialBindingAPI.Apply(mesh.GetPrim()).Bind(material(f'Line_{i}', rgb, 0.4))
+    col = UsdGeom.Cube.Define(stage, '/Track/FloorCollider')
+    col.CreateSizeAttr(1.0)
+    col.CreateVisibilityAttr(UsdGeom.Tokens.invisible)  # 화면에는 안 보이고 충돌만 함
+    xf = UsdGeom.Xformable(col)
+    xf.AddTranslateOp().Set(Gf.Vec3d(W / 2, H / 2, -0.0105))
+    xf.AddScaleOp().Set(Gf.Vec3f(W + 1.0, H + 1.0, 0.02))
+    UsdPhysics.CollisionAPI.Apply(col.GetPrim())
 
     stage.GetRootLayer().Save()
-    print(f'저장: {a.out}')
-    print(f'단위 {unit} m/도면단위, 선 {len(polylines)}개, 색 {len(by_color)}종')
-    print(f'트랙 크기 {w:.2f} m x {h:.2f} m (도면 원점 이동량 x {-ox:.3f}, y {-oy:.3f} m)')
-    if not (3 < w < 20 and 2 < h < 15):
-        print('경고: 대회 트랙(10 x 6 m)과 크기가 많이 다릅니다. --unit 값을 확인하십시오.')
+    print(f'저장: {a.out}, {os.path.join(out_dir, png_name)}')
 
 
 if __name__ == '__main__':

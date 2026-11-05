@@ -161,6 +161,8 @@ class LimoROS2Ackermann(BaseSample):
         add_reference_to_stage(self._path_to_lidar_usd, self._robot_prim_path + "/laser_link/RPLidar_S2e")
 
         st = self._scenario.get("robot_start", {})
+        if isinstance(st, str):  # "m7" 처럼 이름을 주면 start_presets에서 찾음
+            st = self._scenario.get("start_presets", {}).get(st, {})
         XFormPrim(self._robot_prim_path).set_world_poses(
             positions=np.array([[float(st.get("x", 0.0)), float(st.get("y", 0.0)), 0.0]]),
             orientations=np.array([_yaw_quat(float(st.get("yaw_deg", 0.0)))]))

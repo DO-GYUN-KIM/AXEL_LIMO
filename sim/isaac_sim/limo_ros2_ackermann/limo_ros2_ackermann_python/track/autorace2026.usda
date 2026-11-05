@@ -1,0 +1,69 @@
+#usda 1.0
+(
+    defaultPrim = "Track"
+    metersPerUnit = 1
+    upAxis = "Z"
+)
+
+def Xform "Track"
+{
+    def Mesh "Floor" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        int[] faceVertexCounts = [4]
+        int[] faceVertexIndices = [0, 1, 2, 3]
+        rel material:binding = </Track/Looks/FloorMat>
+        normal3f[] normals = [(0, 0, 1), (0, 0, 1), (0, 0, 1), (0, 0, 1)] (
+            interpolation = "vertex"
+        )
+        point3f[] points = [(0, 0, 0), (10, 0, 0), (10, 6, 0), (0, 6, 0)]
+        texCoord2f[] primvars:st = [(0, 0), (1, 0), (1, 1), (0, 1)] (
+            interpolation = "vertex"
+        )
+    }
+
+    def "Looks"
+    {
+        def Material "FloorMat"
+        {
+            token outputs:surface.connect = </Track/Looks/FloorMat/Surface.outputs:surface>
+
+            def Shader "Surface"
+            {
+                uniform token info:id = "UsdPreviewSurface"
+                color3f inputs:diffuseColor.connect = </Track/Looks/FloorMat/Texture.outputs:rgb>
+                float inputs:roughness = 0.7
+                token outputs:surface
+            }
+
+            def Shader "StReader"
+            {
+                uniform token info:id = "UsdPrimvarReader_float2"
+                token inputs:varname = "st"
+                float2 outputs:result
+            }
+
+            def Shader "Texture"
+            {
+                uniform token info:id = "UsdUVTexture"
+                asset inputs:file = @./autorace2026_floor.png@
+                token inputs:sourceColorSpace = "sRGB"
+                float2 inputs:st.connect = </Track/Looks/FloorMat/StReader.outputs:result>
+                float3 outputs:rgb
+            }
+        }
+    }
+
+    def Cube "FloorCollider" (
+        prepend apiSchemas = ["PhysicsCollisionAPI"]
+    )
+    {
+        double size = 1
+        token visibility = "invisible"
+        float3 xformOp:scale = (11, 7, 0.02)
+        double3 xformOp:translate = (4.999999995, 3, -0.0105)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+    }
+}
+

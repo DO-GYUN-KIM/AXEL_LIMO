@@ -4,7 +4,7 @@
 
 - `limo_ros2_ackermann/` Isaac Sim 4.5 확장 (WeGo LimoIsaacSIM 폴더 안에 링크해서 사용)
 - `tools/ack_stamp_relay.py` /limo/ack_cmd → /sim/ackermann_cmd (Stamped)
-- `tools/dxf_to_usd.py` 대회 도면 DXF → 바닥 트랙 USD
+- `tools/dxf_to_usd.py` 대회 도면 DXF → 바닥 트랙 USD (결과: `limo_ros2_ackermann/limo_ros2_ackermann_python/track/`)
 - `launch/isaac_sim.launch.py` 중계 + 카메라 압축 + 변환 노드 + 우리 노드
 
 Isaac Sim 안에서 실행 확인은 아직 안 했습니다(작성 환경에 Isaac Sim 없음).

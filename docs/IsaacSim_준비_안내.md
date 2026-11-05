@@ -8,7 +8,7 @@
 - **방식**: 주최 측(WeGo)이 만든 Isaac Sim 4.5 LIMO 예제에, 저장소에 새로 넣은 **애커먼 예제 `limo_ros2_ackermann`** 을 얹습니다. 차가 받는 명령 경로를 실차와 같게 맞췄습니다: `/cmd_vel` → (변환 노드) → `/limo/ack_cmd` → (시뮬레이터 전용 중계) → Isaac Sim.
 - **일정과 중단 기준**
   - 11/05: 설치, 주최 측 차동 예제로 센서 토픽 확인 (아래 1~3단계)
-  - 11/06: 애커먼 예제 주행, 대회 트랙·장애물·라바콘 배치, 우리 노드 연결 (4~6단계)
+  - 11/06: 애커먼 예제 주행, 우리 노드 연결 (4·6단계). 대회 트랙·장애물·라바콘 배치는 11/05에 미리 만들어 둠(5단계)
   - **11/06 저녁까지 4단계(애커먼으로 좌우 회전 주행)가 안 되면 Gazebo로 넘어갑니다.** 기준은 아래 "합격 기준"에 있습니다.
 - **주의**: 저장소에 넣은 애커먼 예제와 도구는 Isaac Sim이 없는 환경에서 작성했습니다. 코드 문법과 트랙 변환 도구(가짜 도면으로 시험)만 확인했고, **Isaac Sim 안에서 실행해 본 것은 아닙니다.** 4단계의 점검 순서는 이 때문에 있습니다.
 
@@ -23,7 +23,7 @@
 | NVIDIA 드라이버 | **확인 필요** | 535.129.03 이상 (Ubuntu 22.04.5에서는 535.216.01 이상 권장) |
 | ROS2 Humble | **확인 필요** | 없으면 1-2단계에서 설치 |
 | 인터넷 | 필요 | Isaac Sim 내려받기 약 수 GB |
-| 대회 트랙 도면 DXF | **데스크탑으로 복사 필요** | `D:\도균\AutoRace`의 `2026 국민대 LIMO 트랙 도면.zip` 안 DXF |
+| 대회 트랙 도면 DXF | 필요 없음 | 트랙 파일을 미리 만들어 저장소에 넣어 둠(5단계) |
 | 저장소 | | `git clone https://github.com/DO-GYUN-KIM/AXEL_LIMO ~/AXEL_LIMO` |
 | 조이스틱 | 없어도 됨 | 키보드 조종(`teleop_twist_keyboard`)으로 대신 |
 
@@ -113,7 +113,7 @@ Isaac Sim에서:
 | `limo_ros2_ackermann/` | Isaac Sim 확장. 주최 측 차동 예제를 복사해 **애커먼 모델(`limo_ackermann.usd`)과 애커먼 제어 그래프**로 바꾼 것 |
 | `limo_ros2_ackermann/.../scenario.json` | 트랙 파일, 출발 위치, 정차 LIMO(상자)·라바콘 위치. **코드 수정 없이 이 파일만 고쳐 배치를 바꿉니다** |
 | `tools/ack_stamp_relay.py` | `/limo/ack_cmd`(실차 형식) → `/sim/ackermann_cmd`(Isaac 형식) 중계 |
-| `tools/dxf_to_usd.py` | 대회 도면 DXF → Isaac용 바닥 트랙 USD |
+| `tools/dxf_to_usd.py` | 대회 도면 DXF → Isaac용 바닥 트랙 USD (이미 만들어 둔 결과가 `track/`에 있음) |
 | `launch/isaac_sim.launch.py` | 중계 + 카메라 압축 + 변환 노드 + 우리 노드를 한 번에 실행 |
 
 ### 애커먼 예제가 주최 측 차동 예제와 다른 점 (모델 파일을 직접 열어 확인한 값)
@@ -167,36 +167,50 @@ Isaac Sim을 다시 켜고 `Window → Extensions → THIRD PARTY`에서 `limo_r
 
 **합격 기준(11/06 저녁)**: 좌·우 모두 회전하며 앞으로 달리고, `/scan`에 장애물이 보이면 통과. 이게 안 되면 Isaac Sim은 접고 `LIMO_시뮬레이터_검토.md`의 Gazebo 방법으로 넘어갑니다.
 
-## 5. 대회 트랙 만들기 (11/06 오후)
+## 5. 대회 트랙과 장애물 배치 (11/05에 미리 만들어 둠)
+
+대회 트랙과 배치 파일은 이미 저장소에 들어 있습니다(2026-11-05, 사용자 노트북의 도면으로 작성). **11/06에는 `git pull`만 하면 됩니다.**
+
+| 파일 | 내용 |
+|---|---|
+| `limo_ros2_ackermann_python/track/autorace2026.usda` | 대회 트랙 바닥 (10 x 6 m, 충돌 바닥 포함) |
+| `limo_ros2_ackermann_python/track/autorace2026_floor.png` | 바닥 그림 (1픽셀 = 2 mm). 테이프 색은 주최 측 그림(2026Track.png)에서 가져옴 |
+| `limo_ros2_ackermann_python/scenario.json` | 출발 위치 4곳, 3차선 정차 LIMO 7대, 라바콘 8개, 주차 칸 양옆 LIMO 2대 |
+
+### 도면에서 확인한 사실
+
+- 도면(DXF)은 **1:30 축척**입니다(도면 1단위 = 30 mm). 보드 전체 333.33 x 200 단위 = 10 x 6 m로 확인했습니다.
+- 도면은 테이프를 윤곽선 두 줄로 그렸습니다. 변환 도구가 테이프 안쪽을 칠해 실제 노면처럼 만듭니다. 테이프 폭은 도면 기준 약 20 mm입니다.
+- 좌표: 보드 왼쪽 아래 모서리 = (0, 0), x 오른쪽, y 위쪽, 단위 m. 진행은 시계 방향(위쪽 띠에서 오른쪽으로 출발).
+- 3차선 구간: x 4.30~8.36 m, 차로 중심 y = 0.42(1차로, A쪽) / 0.94(2차로, 가운데) / 1.46(3차로, B쪽), 차로 폭 0.52 m. 진행 방향 −x. 2차로로 들어옵니다.
+- 라바콘 구간: 왼쪽 직선, x 중심 0.72 m(폭 0.52 m), y 1.84~3.94 m(흰 선 사이), 진행 방향 +y.
+- 주차 칸: 3 x 2칸, 칸 하나 약 0.53 x 0.63 m. 위쪽 줄 칸 중심 y 4.27, x 6.36 / 6.88 / 7.40.
+
+### 배치는 추정입니다
+
+규정집과 미션 상세 문서에는 **정차 LIMO 7대·라바콘의 정확한 위치가 없습니다**("주최 측이 배치", "수량·간격은 확정 필요"). 그래서 `scenario.json`의 배치는 연습용 예시입니다.
+- M7: 2차로 1대 → 1·3차로 2대 → 2차로 1대 → 1·3차로 2대 → 2차로 1대 (x 7.8 / 7.0 / 6.2 / 5.4 / 4.7 m). 차가 지그재그로 한 차로씩 비켜 가야 합니다.
+- M8: 콘 두 개로 문을 만들고(문 폭 0.4 m) 좌우로 엇갈리게 4개 문, 8개.
+- M4: 위쪽 줄 가운데 칸을 목표로 가정하고 양옆 칸에 LIMO.
+- 라바콘 크기(밑면 반지름 5 cm, 높이 20 cm)도 추정입니다. 실물을 재서 `radius`, `height`를 고치십시오.
+
+### 출발 위치 바꾸기
+
+`scenario.json`의 `"robot_start"`에 이름을 넣습니다: `"start"`(출발선), `"m7"`(3차선 진입 직전), `"m8"`(라바콘 구간 직전), `"parking"`(주차 구역 앞). 고친 뒤 예제를 다시 Load 합니다.
+
+### 도면이 바뀌면 다시 만들기
+
+주최 측이 도면을 새로 주면, 도면 zip 안의 DXF와 2026Track.png로 다시 만듭니다.
 
 ```bash
-python3 -m pip install --user ezdxf usd-core
+python3 -m pip install --user ezdxf usd-core numpy scipy pillow
 cd ~/AXEL_LIMO/sim/isaac_sim/tools
-python3 dxf_to_usd.py ~/도면/트랙.dxf --list-layers             # 레이어 이름 확인
-python3 dxf_to_usd.py ~/도면/트랙.dxf -o ../limo_ros2_ackermann/limo_ros2_ackermann_python/autorace_track.usda \
-        --layers <차선 레이어>,<정지선 레이어>
+python3 dxf_to_usd.py "2026Track 도면 시트1.dxf" --unit 0.03 --ref-png 2026Track.png \
+        -o ../limo_ros2_ackermann/limo_ros2_ackermann_python/track/autorace2026.usda
 ```
 
-- 끝나면 트랙 크기가 출력됩니다. **10 × 6 m 근처가 아니면 단위가 틀린 것**입니다(`--unit 0.001`은 mm, `--unit 0.01`은 cm).
-- 선 폭 기본값은 3 cm(추정)입니다. 실제 테이프 폭을 재서 `--line-width`로 맞추십시오.
-- 글자·치수선 레이어는 빼야 바닥에 엉뚱한 선이 안 생깁니다.
-- 도면 왼쪽 아래 모서리가 시뮬레이터 좌표 (0, 0)이 됩니다. 도면 위 위치(mm)를 1000으로 나누고 같은 원점 이동을 빼면 시뮬레이터 좌표(m)입니다.
-
-`scenario.json` 고치기:
-
-```json
-"track_usd": "autorace_track.usda",
-"robot_start": {"x": 1.0, "y": 0.4, "yaw_deg": 0},
-"objects": [
-  {"type": "box",  "name": "limo_1", "x": 5.0, "y": 0.30, "yaw_deg": 0},
-  {"type": "cone", "name": "cone_L1", "x": 7.0, "y": 0.25, "radius": 0.10, "height": 0.20}
-]
-```
-
-- `box` 기본 크기는 LIMO 외곽 0.32 × 0.23 × 0.25 m(모델에서 잰 값)입니다.
-- `cone` 크기 기본값(지름 20 cm, 높이 20 cm)은 **추정**입니다. 실제 라바콘을 재서 넣으십시오. 라바콘은 쓰러질 수 있게 해 두었습니다(`"dynamic": false`면 고정).
-- 3차선 정차 LIMO 7대는 규정집 미션 상세의 배치를 보고 넣습니다. 배치를 바꾼 파일을 여러 개 만들어 두면 다양한 경우를 시험할 수 있습니다.
-- 처음엔 **트랙 전체 대신 3차선 구간과 라바콘 구간만** 쓰는 것을 권합니다. 장면이 가벼울수록 3070에서 빠릅니다.
+- 끝나면 보드 크기가 출력됩니다. **10 x 6 m가 아니면 `--unit`이 틀린 것**입니다.
+- 원본 도면은 저장소에 넣지 않았습니다(사용자 노트북 `D:\도균\AutoRace`에 있음).
 
 ## 6. 우리 노드 연결 (11/06 오후)
 
