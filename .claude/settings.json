@@ -1,0 +1,37 @@
+{
+  "permissions": {
+    "deny": [
+      "Bash(ros2 topic pub /limo/ack_cmd:*)",
+      "Bash(ros2 topic pub /cmd_vel:*)",
+      "Bash(git push --force:*)",
+      "Bash(git push -f:*)",
+      "Bash(rm -rf ~/wego_ws:*)",
+      "Bash(sudo reboot:*)",
+      "Bash(sudo apt upgrade:*)"
+    ],
+    "ask": [
+      "Bash(ros2 launch:*)",
+      "Bash(ros2 run:*)",
+      "Bash(ros2 topic pub:*)",
+      "Bash(sudo:*)",
+      "Bash(git push:*)",
+      "Bash(bash tools/car_deploy.sh:*)"
+    ],
+    "allow": [
+      "Bash(ros2 topic list:*)",
+      "Bash(ros2 topic echo:*)",
+      "Bash(ros2 topic hz:*)",
+      "Bash(ros2 topic info:*)",
+      "Bash(ros2 node list:*)",
+      "Bash(ros2 node info:*)",
+      "Bash(ros2 param get:*)",
+      "Bash(ros2 param list:*)",
+      "Bash(ros2 bag info:*)",
+      "Bash(colcon build:*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git fetch:*)"
+    ]
+  }
+}
